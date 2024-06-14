@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countries of EU</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .compare-container select,
+        .compare-container button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #007bff;
+            background-color: #ffffff;
+            color: #007bff;
+            cursor: pointer;
+        }
+
+        .compare-container button:hover {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="navbar">
+            <a href="home.html">Home</a>
+            <a href="map.html">Map</a>
+            <a href="chart.html">Chart</a>
+        </div>
+    </nav>
+    
+    <div class="pozadina">
+        <ul>
+            <li data-country="Austria" onclick="loadCountryData('Austria')">Austria</li>
+            <li data-country="Belgium" onclick="loadCountryData('Belgium')">Belgium</li>
+            <li data-country="Bulgaria" onclick="loadCountryData('Bulgaria')">Bulgaria</li>
+            <li data-country="Croatia" onclick="loadCountryData('Croatia')">Croatia</li>
+            <li data-country="Cyprus" onclick="loadCountryData('Cyprus')">Cyprus</li>
+            <li data-country="Czech Republic" onclick="loadCountryData('Czech Republic')">Czech Republic</li>
+            <li data-country="Denmark" onclick="loadCountryData('Denmark')">Denmark</li>
+            <li data-country="Estonia" onclick="loadCountryData('Estonia')">Estonia</li>
+            <li data-country="Finland" onclick="loadCountryData('Finland')">Finland</li>
+            <li data-country="France" onclick="loadCountryData('France')">France</li>
+            <li data-country="Germany" onclick="loadCountryData('Germany')">Germany</li>
+            <li data-country="Greece" onclick="loadCountryData('Greece')">Greece</li>
+            <li data-country="Hungary" onclick="loadCountryData('Hungary')">Hungary</li>
+            <li data-country="Ireland" onclick="loadCountryData('Ireland')">Ireland</li>
+            <li data-country="Italy" onclick="loadCountryData('Italy')">Italy</li>
+            <li data-country="Latvia" onclick="loadCountryData('Latvia')">Latvia</li>
+            <li data-country="Lithuania" onclick="loadCountryData('Lithuania')">Lithuania</li>
+            <li data-country="Luxembourg" onclick="loadCountryData('Luxembourg')">Luxembourg</li>
+            <li data-country="Malta" onclick="loadCountryData('Malta')">Malta</li>
+            <li data-country="Netherlands" onclick="loadCountryData('Netherlands')">Netherlands</li>
+            <li data-country="Poland" onclick="loadCountryData('Poland')">Poland</li>
+            <li data-country="Portugal" onclick="loadCountryData('Portugal')">Portugal</li>
+            <li data-country="Romania" onclick="loadCountryData('Romania')">Romania</li>
+            <li data-country="Slovakia" onclick="loadCountryData('Slovakia')">Slovakia</li>
+            <li data-country="Slovenia" onclick="loadCountryData('Slovenia')">Slovenia</li>
+            <li data-country="Spain" onclick="loadCountryData('Spain')">Spain</li>
+            <li data-country="Sweden" onclick="loadCountryData('Sweden')">Sweden</li>
+        </ul>
+    </div>
+
+    <script>
+        function loadCountryData(country) {
+            window.location.href = 'chart_maker.html?country=' + country;
+        }
+    </script>
+
+</body>
+</html>
+
+
+

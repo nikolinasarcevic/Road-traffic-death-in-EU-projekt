@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Data</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .tooltip_chart {
+            position: absolute;
+            text-align: center;
+            padding: 5px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="navbar">
+            <a href="home.html">Home</a>
+            <a href="map.html">Map</a>
+            <a href="chart.html">Chart</a>
+            <button onclick="goBack()">Back</button>
+        <div class="compare-container">
+            <label for="compare-with" id="compare-text">Compare with:</label>
+            <select id="compare-with"></select>
+            <button id="compare-btn">Compare</button>
+        </div>
+        </div>
+    </nav>
+    <div class="chart-container">
+        <h3 id="country-name"></h3>
+        <svg id="chart"></svg>
+        <div class="tooltip_chart" id="tooltip"></div>
+    </div>
+
+    <script>
+        function goBack() {
+                window.history.back();
+            }
+        //dohvaćanje kliknute države za graf
+        const urlParams = new URLSearchParams(window.location.search);
+        const country = urlParams.get('country');
+        document.getElementById('country-name').innerText = country;
+
+        //učitavanje podataka
+        d3.json('dataset_eu.json').then(dataset => {
+            
+            if (!dataset) {
+                console.error('Dataset is undefined or empty');
+                return;
+            }
+
+            //dohvaćanje podataka za odabranu državu
+            const countryData = dataset.map(d => ({
+                year: d.TIME_PERIOD,
+                deaths: d[country]
+            }));
+
+            
+            if (!countryData || countryData.length === 0) {
+                console.error('Country data is undefined or empty');
+                return;
+            }
+
+            //pravljenje bar charta            
+            const margin = { top: 20, right: 20, bottom: 50, left: 70 };
+            const width = 960 - margin.left - margin.right;
+            const height = 500 - margin.top - margin.bottom;
+
+            const x = d3.scaleBand().range([0, width]).padding(0.1);
+            const y = d3.scaleLinear().range([height, 0]);
+
+            const svg = d3.select('#chart')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            x.domain(countryData.map(d => d.year));
+            y.domain([0, d3.max(countryData, d => d.deaths)]);
+            
+            svg.selectAll('.bar')
+                .data(countryData)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d.year))
+                .attr('width', x.bandwidth())
+                .attr('y', d => y(d.deaths))
+                .attr('height', d => height - y(d.deaths))
+                .on('mouseover', function(event, d) {
+                    d3.select('#tooltip')
+                        .style('opacity', 1)
+                        .html(`Year: ${d.year}<br>Deaths: ${d.deaths}`)
+                        .style('left', (event.pageX + 5) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                //infoBox za svaki stupac
+                .on('mouseout', function() {
+                    d3.select('#tooltip')
+                        .style('opacity', 0);
+                });
+
+            svg.append('g')
+                .attr('class', 'x-axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            svg.append('g')
+                .attr('class', 'y-axis')
+                .call(d3.axisLeft(y));
+
+            
+            svg.append('text')
+                .attr('class', 'x-axis-label')
+                .attr('text-anchor', 'end')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', height + margin.top + 30)
+                .text('Years');
+
+            
+            svg.append('text')
+                .attr('class', 'y-axis-label')
+                .attr('text-anchor', 'end')
+                .attr('x', -height / 2)
+                .attr('y', -margin.left + 20)
+                .attr('transform', 'rotate(-90)')
+                .text('Number of fatalities');
+
+
+            const comparisonSelect = d3.select('#compare-with');
+           
+            comparisonSelect.append('option').text('Choose country').attr('value', '');
+
+            //Učitavanje država u dropdown
+            const countries = Object.keys(dataset[0]).filter(key => key !== 'TIME_PERIOD' && key !== country);
+            countries.forEach(country => {
+                comparisonSelect.append('option').text(country).attr('value', country);
+            });
+
+            //Listener za klik na gumb
+            document.getElementById('compare-btn').addEventListener('click', () => {
+                const compareCountry = document.getElementById('compare-with').value;
+                if (compareCountry) {
+                    window.location.href = `compare.html?country1=${country}&country2=${compareCountry}`;
+                } else {
+                    alert('Please select a country to compare with.');
+                }
+            });
+
+        }).catch(error => {
+            console.error('Error loading or parsing dataset:', error);
+        });
+    </script>
+</body>
+</html>

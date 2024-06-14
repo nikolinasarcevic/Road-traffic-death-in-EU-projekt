@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map</title>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .button.pause {
+            background-color: #f44336;
+        }
+
+        .button.resume {
+            background-color: #007bff;
+        }
+
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="navbar">
+            <a href="home.html">Home</a>
+            <a href="map.html">Map</a>
+            <a href="chart.html">Chart</a>
+        </div>
+    </nav>
+
+    <div class="pozadina_karta">
+        <div class="svg-container">
+            <div class="info-box" id="info-box">Hover over a country to see details</div>
+            <script>
+                var width = 1060;
+                var height = 850;
+
+                var projection = d3.geo.mercator()
+                    .center([15, 71.5])
+                    .scale(600)
+                    .translate([width / 2, 0]);
+
+                var path = d3.geo.path()
+                    .projection(projection);
+
+                var svg = d3.select(".svg-container").append("svg")
+                    .attr("viewBox", "0 0 " + width + " " + height)
+                    .attr("preserveAspectRatio", "xMidYMid meet")
+                    .call(d3.behavior.zoom().on("zoom", function () {
+                        svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+                    }));
+
+                var mapGroup = svg.append("g")
+                    .attr("transform", "scale(0.8) translate(80, 80)"); // Transformacija grupe za bolje pozicioniranje karata
+
+                var infoBox = d3.select("#info-box");
+
+                var colorRange = ["#700505", "#841c17", "#963029", "#a64139", "#b5514c", "#c1615d", "#cd716d", "#d7807f", "#e1908f", "#ea9f9f"];
+
+                // Dodavanje prikaza godine na vrh karte
+                var yearDisplay = svg.append("text")
+                    .attr("class", "year-display")
+                    .attr("x", 20)
+                    .attr("y", 50)
+                    .text("2021.");
+
+                //učitavanje karte europe
+                d3.json("europe.topojson", function (error, data) {
+                    if (error) throw error;
+
+                    //učitavanje dataseta sa podatcima o smrtnosti
+                    d3.json("dataset_eu.json", function (error, dataset) {
+                        if (error) throw error;
+
+                        var fatalities = {};
+
+                        // Mapiranje ID-ja države na ime države iz topojson podataka
+                        var countryNameById = {};
+                        data.objects.europe.geometries.forEach(function(d) {
+                            countryNameById[d.id] = d.properties.NAME;
+                        });
+
+                        dataset.forEach(function (d) {
+                            for (var countryName in d) {
+                                if (d.hasOwnProperty(countryName)) {
+                                    var fatalitiesCount = +d[countryName];
+                                    fatalities[countryName] = fatalitiesCount;
+                                }
+                            }
+                        });
+
+                        //definiranje domene i raspona za prikaza boja
+                        var color = d3.scale.quantize()
+                            .domain([8150, 0]) //max i min
+                            .range(colorRange);
+
+                        var countries = svg.selectAll(".country")
+                            .data(topojson.feature(data, data.objects.europe).features)
+                            .enter().append("path")
+                            .attr("class", function (d) {
+                                return "country " + color(fatalities[d.properties.NAME]); // Dodjeljivanje klase "country" i boje prema broju umrlih
+                            })
+                            .attr("d", path)
+                            .style("stroke", "black") //boja za granice između država
+                            .style("fill", function (d) {
+                                var fatalitiesCount = fatalities[d.properties.NAME]; // dohvaćanje broja umrlih za trenutnu državu
+                                // Provjera je li broj umrlih definiran, te postavljanje boje prema skali ako je, ili sive ako nije
+                                return isNaN(fatalitiesCount) ? "#7d7f82" : color(fatalitiesCount);
+                            })
+                            .on("mouseover", function (d) {
+                                infoBox.style("display", "block");
+                                var countryName = d.properties.NAME; 
+                                var fatalitiesCount = fatalities[countryName] || "Data not available";
+                                infoBox.html("<strong>Country:</strong> " + countryName + "<br><strong>Fatalities:</strong> " + fatalitiesCount);
+                            })
+                            .on("mousemove", function (event) {
+                                // Pomicanje informacijskog okvira s mišem
+                                infoBox.style("left", (event.pageX + 10) + "px")
+                                    .style("top", (event.pageY - 28) + "px");
+                            })
+                            .on("mouseout", function () {
+                                infoBox.style("display", "none");
+                            })
+                            .on("click", function(d) {
+                                var countryName = d.properties.NAME;
+                                // Preusmjeravanje na stranicu za izradu grafa za odabranu državu ako postoje podaci
+                                if (fatalities[countryName] !== undefined && !isNaN(fatalities[countryName])) {
+                                    window.location.href = "chart_maker.html?country=" + encodeURIComponent(countryName);
+                                } else {
+                                    alert("No data available for " + countryName);
+                                }
+                            });
+
+
+                        var legend = svg.selectAll(".legend")
+                            .data(color.range().map(function (d) {
+                                d = color.invertExtent(d);
+                                if (!d[0]) d[0] = 0;
+                                if (!d[1]) d[1] = 0;
+                                return d;
+                            }))
+                            .enter().append("g")
+                            .attr("class", "legend")
+                            .attr("transform", function (d, i) {
+                                return "translate(0," + ((i * 20) + 20) + ")";
+                            });
+
+                        legend.append("rect")
+                            .attr("x", width - 18)
+                            .attr("width", 18)
+                            .attr("height", 18)
+                            .style("fill", function (d) {
+                                return color(d[0]);
+                            });
+
+                        legend.append("text")
+                            .attr("x", width - 24)
+                            .attr("y", 9)
+                            .attr("dy", ".35em")
+                            .style("text-anchor", "end")
+                            .text(function (d) {
+                                return Math.round(d[0]) + " - " + Math.round(d[1]);
+                            });
+
+                        //odabir godine koja će se prikazati na mapi
+                        d3.selectAll(".godine").on("click", function () {
+                            var year = +this.textContent.slice(0, -1);
+                            yearDisplay.text(year + ".");
+                            updateMap(year);
+                        });
+
+                        //updatanje mape za svaku odabranu godinu
+                        function updateMap(year) {
+                            fatalities = {};
+                            dataset.forEach(function (d) {
+                                if (d.TIME_PERIOD === year) {
+                                    for (var country in d) {
+                                        if (country !== "TIME_PERIOD") {
+                                            fatalities[country] = +d[country];
+                                        }
+                                    }
+                                }
+                            });
+
+                            countries.transition()
+                                .duration(750)
+                                .style("fill", function (d) {
+                                    var fatalitiesCount = fatalities[d.properties.NAME];
+                                    return isNaN(fatalitiesCount) ? "#7d7f82" : color(fatalitiesCount);
+                                });
+                        }
+
+                        var isAnimating = false;
+                        var animationTimeout;
+                        var currentYearIndex = 0;
+                        var years = d3.range(2000, 2022);
+
+                        function animateYears() {
+                            if (isAnimating) {
+                                // Ako je animacija već pokrenuta, zaustavi je
+                                isAnimating = false;
+                                clearTimeout(animationTimeout);
+                                d3.select("#animate-btn").text("Resume").classed("pause", false).classed("resume", true);
+                                return;
+                            }
+
+                            // Ako animacija nije pokrenuta, pokreni je
+                            isAnimating = true;
+                            d3.select("#animate-btn").text("Pause").classed("pause", true).classed("resume", false);
+
+                            function nextYear() {
+                                if (currentYearIndex < years.length && isAnimating) {
+                                    var year = years[currentYearIndex];
+                                    yearDisplay.text(year + ".");
+                                    updateMap(year);
+                                    highlightYearButton(year);
+                                    currentYearIndex++;
+                                    animationTimeout = setTimeout(nextYear, 500);
+                                } else {
+                                    // Ako je došao do kraja, resetiraj sve
+                                    isAnimating = false;
+                                    currentYearIndex = 0;
+                                    d3.select("#animate-btn").text("Start").classed("pause", false).classed("resume", false);
+                                }
+                            }
+
+                            nextYear();
+                        }
+
+                        function highlightYearButton(year) {
+                            d3.selectAll(".godine").style("background-color", null);
+                            d3.select(".godine:nth-child(" + (year - 1999) + ")").style("background-color", "lightblue");
+                        }
+
+                        d3.select("#animate-btn").on("click", animateYears);
+                    });
+                });
+            </script>
+        </div>
+
+        <div class="gumbi">
+            <button id="animate-btn" class="button">Start</button>
+            <div class="lenta_vremena">
+                <button class="godine">2000.</button>
+                <button class="godine">2001.</button>
+                <button class="godine">2002.</button>
+                <button class="godine">2003.</button>
+                <button class="godine">2004.</button>
+                <button class="godine">2005.</button>
+                <button class="godine">2006.</button>
+                <button class="godine">2007.</button>
+                <button class="godine">2008.</button>
+                <button class="godine">2009.</button>
+                <button class="godine">2010.</button>
+                <button class="godine">2011.</button>
+                <button class="godine">2012.</button>
+                <button class="godine">2013.</button>
+                <button class="godine">2014.</button>
+                <button class="godine">2015.</button>
+                <button class="godine">2016.</button>
+                <button class="godine">2017.</button>
+                <button class="godine">2018.</button>
+                <button class="godine">2019.</button>
+                <button class="godine">2020.</button>
+                <button class="godine">2021.</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
