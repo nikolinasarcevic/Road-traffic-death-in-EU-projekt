@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,12 +11,51 @@
     <div class="container">
         <h1>Road traffic death in EU</h1>
         <div class="buttons">
-            <button class="map" onclick="location.href='map.html'">Map</button>
-            <button class="chart" onclick="location.href='chart.html'">Chart</button>
+            <button class="map" onclick="location.href='map.html'" disabled>Map</button>
+            <button class="chart" onclick="location.href='chart.html'" disabled>Chart</button>
+        </div>
+
+        <div class="radio-buttons">
+            <input type="radio" id="absolute" name="dataset" value="absolute">
+            <label for="absolute">Absolute Data Set</label><br>
+            <input type="radio" id="relative" name="dataset" value="relative">
+            <label for="relative">Relative Data Set</label><br>
         </div>
     </div>
+
+    <script>
+        // Kod za spremanje odabrane vrijednosti radio buttona
+        const radioButtons = document.querySelectorAll('.radio-buttons input[type="radio"]');
+        const mapButton = document.querySelector('.map');
+        const chartButton = document.querySelector('.chart');
+
+        function checkRadioButtons() {
+            let isAnyRadioButtonChecked = false;
+            radioButtons.forEach(button => {
+                if (button.checked) {
+                    isAnyRadioButtonChecked = true;
+                }
+            });
+            if (isAnyRadioButtonChecked) {
+                mapButton.disabled = false;
+                chartButton.disabled = false;
+            } else {
+                mapButton.disabled = true;
+                chartButton.disabled = true;
+            }
+        }
+
+        radioButtons.forEach(button => {
+            button.addEventListener('change', function() {
+                if (this.checked) {
+                    localStorage.setItem('selectedDataset', this.value);
+                }
+                checkRadioButtons();
+            });
+        });
+
+        // Provjera stanja radio buttona prilikom učitavanja stranice
+        checkRadioButtons();
+    </script>
 </body>
 </html>
-
-
-

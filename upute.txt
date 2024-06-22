@@ -1,0 +1,8 @@
+Prije pokretanja web stranice potrebno je pokrenuti server
+git bash here na cijelu mapu
+te upisati python -m http.server 
+zatim otići na stranicu http://localhost:8000/
+
+ili 
+otvoriti cijelu mapu u Visual Studio Code te iz njega u doljnjem desnom uglu
+kliknuti na Go Live.

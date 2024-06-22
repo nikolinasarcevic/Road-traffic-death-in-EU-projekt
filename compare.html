@@ -54,7 +54,7 @@
         document.getElementById('country2-name').innerText = country2;
 
         
-        d3.json('dataset_eu.json').then(dataset => {
+        d3.json('relative_dataset.json').then(dataset => {
         
             if (!dataset) {
                 console.error('Dataset is undefined or empty');
@@ -114,8 +114,8 @@
                 .attr('class', 'bar')
                 .attr('x', d => x(d.year))
                 .attr('width', x.bandwidth())
-                .attr('y', d => y(d.deaths))
-                .attr('height', d => height - y(d.deaths))
+                .attr('y', height)
+                .attr('height', 0)
                 .on('mouseover', function(event, d) {
                     d3.select(`#${tooltipId}`)
                         .style('opacity', 1)
@@ -126,7 +126,12 @@
                 .on('mouseout', function() {
                     d3.select(`#${tooltipId}`)
                         .style('opacity', 0);
-                });
+                })
+                .transition()
+                .duration(1000)
+                .attr('y', d => y(d.deaths))
+                .attr('height', d => height - y(d.deaths));
+
 
             svg.append('g')
                 .attr('class', 'x-axis')
@@ -135,8 +140,8 @@
                 .selectAll('text')
                 .attr('transform', 'rotate(-90)')
                 .style('text-anchor', 'end')
-                .attr('dx', '-.8em') // Prilagođen pomak teksta ulijevo
-                .attr('dy', '-0.15em') // Prilagođen pomak teksta
+                .attr('dx', '-.8em') 
+                .attr('dy', '-0.15em') 
 
             svg.append('g')
                 .attr('class', 'y-axis')
@@ -154,10 +159,10 @@
             svg.append('text')
                 .attr('class', 'y-axis-label')
                 .attr('text-anchor', 'end')
-                .attr('x', -height / 4)
-                .attr('y', -margin.left + 13)
+                .attr('x', -height / 10)
+                .attr('y', -margin.left + 15)
                 .attr('transform', 'rotate(-90)')
-                .text('Number of Fatalities');
+                .text('Fatalities per thousand inhabitants');
         }
 
         //pravljenje pie chart-a
@@ -172,14 +177,12 @@
                 .append('g')
                 .attr('transform', `translate(${width / 2},${height / 2})`);
 
-            //računanje postotka
-            const totalDeaths = sumFatalities1 + sumFatalities2;
-            const percent1 = (sumFatalities1 / totalDeaths) * 100;
-            const percent2 = (sumFatalities2 / totalDeaths) * 100;
+            const totalDeaths = data.reduce((acc, d) => acc + d.deaths, 0);
+            const percent1 = (data[0].deaths / totalDeaths) * 100;
+            const percent2 = (data[1].deaths / totalDeaths) * 100;
 
-            //definiranje boja 
-            const color1 = percent1 > percent2 ? '#063771' : '#4682b4'; 
-            const color2 = percent1 > percent2 ? '#4682b4' : '#063771'; 
+            const color1 = percent1 > percent2 ? '#063771' : '#4682b4';
+            const color2 = percent1 > percent2 ? '#4682b4' : '#063771';
 
             const color = d3.scaleOrdinal()
                 .domain(data.map(d => d.year))
@@ -195,11 +198,12 @@
                 .innerRadius(0)
                 .outerRadius(radius);
 
-            svg.selectAll('path')
+            const path = svg.selectAll('path')
                 .data(arcs)
                 .enter().append('path')
                 .attr('fill', d => color(d.data.year))
                 .attr('d', arc)
+                .each(function(d) { this._current = d; })
                 .on('mouseover', function(event, d) {
                     const percent = ((d.data.deaths / totalDeaths) * 100).toFixed(2);
                     d3.select(`#${tooltipId}`)
@@ -213,32 +217,43 @@
                         .style('opacity', 0);
                 });
 
-            svg.append('text')
-                .attr('dy', '.35em')
-                .style('text-anchor', 'middle')
-                .text('Result');
+            path.transition()
+                .duration(2000)
+                .attrTween('d', function(d) {
+                    const interpolate = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
+                    return function(t) {
+                        return arc(interpolate(t));
+                    };
+                });
 
-            svg.append('text')
-                .attr('dy', '1.5em')
+            // Dodavanje imena država
+            svg.selectAll('text.label')
+                .data(arcs)
+                .enter().append('text')
+                .attr('class', 'label')
+                .attr('transform', function(d) {
+                    var pos = arc.centroid(d);
+                    return `translate(${pos})`;
+                })
+                .attr('dy', '0.35em')
                 .style('text-anchor', 'middle')
-                .text(`${totalDeaths} deaths`);
+                .style('font-size', '1.5vw')
+                .text(d => d.data.year);
         }
 
-
-
-     
+        // Pretpostavljamo da su podaci za grafove već definirani
         renderBarChart(country1Data, 'chart1', 'tooltip1');
         renderBarChart(country2Data, 'chart2', 'tooltip2');
 
-        //kombinacija podataka
         const combinedData = [
             { year: country1, deaths: sumFatalities1 },
             { year: country2, deaths: sumFatalities2 }
         ];
 
-        
         renderPieChart(combinedData, 'combined-chart', 'tooltip3');
         document.getElementById('combined-chart-title').innerText = 'Result';
+
+
 
         }).catch(error => {
             console.error('Error loading or parsing dataset:', error);

@@ -19,6 +19,44 @@
             opacity: 0;
         }
 
+        .radio-buttons-nav {
+            width: 5%;
+            margin-top: 0.7%;
+            height: auto;
+            display: flex; 
+            margin-right: 6%;
+            margin-bottom: -5%;
+        }
+
+        .radio-buttons-nav input[type="radio"] {
+            display: none; 
+        }
+
+        .radio-buttons-nav label {
+            display: inline-block;
+            padding: 2% 4%; 
+            font-size: 1vw;
+            cursor: pointer;
+            background-color: #ffffff;
+            color: #007bff;
+            border-radius: 5px;
+            margin-right: 3%; 
+            flex: 1; 
+            text-align: center;
+            transition: all 0.3s ease; 
+            white-space: nowrap;
+            vertical-align: middle;
+            display: flex;
+            align-items: center;
+        }
+
+        .radio-buttons-nav input[type="radio"]:checked + label {
+            background-color: #0056b3;
+            font-weight: bold;
+            color: #ffffff; 
+            padding: 5% 10%;
+        }
+
     </style>
 </head>
 <body>
@@ -28,6 +66,12 @@
             <a href="map.html">Map</a>
             <a href="chart.html">Chart</a>
             <button onclick="goBack()">Back</button>
+            <div class="radio-buttons-nav">
+                <input type="radio" id="absolute" name="dataset" value="absolute" onchange="handleDatasetChange()">
+                <label for="absolute">Absolute Dataset</label>
+                <input type="radio" id="relative" name="dataset" value="relative" onchange="handleDatasetChange()">
+                <label for="relative">Relative Dataset</label>
+            </div>
         <div class="compare-container">
             <label for="compare-with" id="compare-text">Compare with:</label>
             <select id="compare-with"></select>
@@ -42,6 +86,22 @@
     </div>
 
     <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    var selectedDataset = localStorage.getItem('selectedDataset');
+                    if (selectedDataset === 'absolute') {
+                        document.getElementById('absolute').checked = true;
+                    } else if (selectedDataset === 'relative') {
+                        document.getElementById('relative').checked = true;
+                    }
+                });
+
+                function handleDatasetChange() {
+                    var selectedDataset = document.querySelector('input[name="dataset"]:checked').value;
+                    localStorage.setItem('selectedDataset', selectedDataset);
+                    location.reload(); // Ponovno učitava stranicu kako bi se prikazali novi podaci
+                }
+
+
         function goBack() {
                 window.history.back();
             }
@@ -50,8 +110,19 @@
         const country = urlParams.get('country');
         document.getElementById('country-name').innerText = country;
 
+        const selectedDataset = localStorage.getItem('selectedDataset');
+
+            let filename;
+
+            if (selectedDataset === 'absolute') {
+                filename = 'dataset_eu.json';
+            } else if (selectedDataset === 'relative') {
+                filename = 'relative_dataset.json';
+            } else {
+                console.log('Error');
+            }
         //učitavanje podataka
-        d3.json('dataset_eu.json').then(dataset => {
+        d3.json(filename).then(dataset => {
             
             if (!dataset) {
                 console.error('Dataset is undefined or empty');
@@ -93,8 +164,8 @@
                 .attr('class', 'bar')
                 .attr('x', d => x(d.year))
                 .attr('width', x.bandwidth())
-                .attr('y', d => y(d.deaths))
-                .attr('height', d => height - y(d.deaths))
+                .attr('y', height) 
+                .attr('height', 0) 
                 .on('mouseover', function(event, d) {
                     d3.select('#tooltip')
                         .style('opacity', 1)
@@ -102,11 +173,16 @@
                         .style('left', (event.pageX + 5) + 'px')
                         .style('top', (event.pageY - 28) + 'px');
                 })
-                //infoBox za svaki stupac
                 .on('mouseout', function() {
                     d3.select('#tooltip')
                         .style('opacity', 0);
-                });
+                })
+                .transition() 
+                .duration(1000) 
+                .attr('y', d => y(d.deaths)) 
+                .attr('height', d => height - y(d.deaths)); 
+
+                
 
             svg.append('g')
                 .attr('class', 'x-axis')
@@ -125,8 +201,9 @@
                 .attr('y', height + margin.top + 30)
                 .text('Years');
 
-            
-            svg.append('text')
+
+            if (filename === 'dataset_eu.json') {
+                svg.append('text')
                 .attr('class', 'y-axis-label')
                 .attr('text-anchor', 'end')
                 .attr('x', -height / 2)
@@ -134,30 +211,47 @@
                 .attr('transform', 'rotate(-90)')
                 .text('Number of fatalities');
 
+                console.log('a');
 
-            const comparisonSelect = d3.select('#compare-with');
-           
-            comparisonSelect.append('option').text('Choose country').attr('value', '');
+                document.getElementById('compare-text').style.display = 'none';
+                document.getElementById('compare-with').style.display = 'none';
+                document.getElementById('compare-btn').style.display = 'none';
 
-            //Učitavanje država u dropdown
-            const countries = Object.keys(dataset[0]).filter(key => key !== 'TIME_PERIOD' && key !== country);
-            countries.forEach(country => {
-                comparisonSelect.append('option').text(country).attr('value', country);
+            } else if (filename === 'relative_dataset.json') {
+                svg.append('text')
+                .attr('class', 'y-axis-label')
+                .attr('text-anchor', 'end')
+                .attr('x', -height / 4)
+                .attr('y', -margin.left + 20)
+                .attr('transform', 'rotate(-90)')
+                .text('Fatalities per thousand inhabitants');
+
+                console.log('r');
+
+                const comparisonSelect = d3.select('#compare-with');
+
+                comparisonSelect.append('option').text('Choose country').attr('value', '');
+
+                //Učitavanje država u dropdown
+                const countries = Object.keys(dataset[0]).filter(key => key !== 'TIME_PERIOD' && key !== country);
+                countries.forEach(country => {
+                    comparisonSelect.append('option').text(country).attr('value', country);
+                });
+
+                //Listener za klik na gumb
+                document.getElementById('compare-btn').addEventListener('click', () => {
+                    const compareCountry = document.getElementById('compare-with').value;
+                    if (compareCountry) {
+                        window.location.href = `compare.html?country1=${country}&country2=${compareCountry}`;
+                    } else {
+                        alert('Please select a country to compare with.');
+                    }
+                });
+            }
+            
+            }).catch(error => {
+                console.error('Error loading or parsing dataset:', error);
             });
-
-            //Listener za klik na gumb
-            document.getElementById('compare-btn').addEventListener('click', () => {
-                const compareCountry = document.getElementById('compare-with').value;
-                if (compareCountry) {
-                    window.location.href = `compare.html?country1=${country}&country2=${compareCountry}`;
-                } else {
-                    alert('Please select a country to compare with.');
-                }
-            });
-
-        }).catch(error => {
-            console.error('Error loading or parsing dataset:', error);
-        });
     </script>
 </body>
 </html>

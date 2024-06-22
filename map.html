@@ -28,6 +28,43 @@
             background-color: #007bff;
         }
 
+        .radio-buttons-nav {
+            width: 5%;
+            margin-top: 0.7%;
+            height: auto;
+            display: flex; 
+            margin-right: 6%;
+        }
+
+        .radio-buttons-nav input[type="radio"] {
+            display: none; 
+        }
+
+        .radio-buttons-nav label {
+            display: inline-block;
+            padding: 2% 4%; 
+            font-size: 1vw;
+            cursor: pointer;
+            background-color: #ffffff;
+            color: #007bff;
+            border-radius: 5px;
+            margin-right: 3%; 
+            flex: 1; 
+            text-align: center;
+            transition: all 0.3s ease; 
+            white-space: nowrap;
+            vertical-align: middle;
+            display: flex;
+            align-items: center;
+        }
+
+        .radio-buttons-nav input[type="radio"]:checked + label {
+            background-color: #0056b3;
+            font-weight: bold;
+            color: #ffffff; 
+            padding: 5% 10%;
+        }
+        
     </style>
 </head>
 
@@ -37,6 +74,13 @@
             <a href="home.html">Home</a>
             <a href="map.html">Map</a>
             <a href="chart.html">Chart</a>
+            
+            <div class="radio-buttons-nav">
+                <input type="radio" id="absolute" name="dataset" value="absolute" onchange="handleDatasetChange()">
+                <label for="absolute">Absolute Dataset</label>
+                <input type="radio" id="relative" name="dataset" value="relative" onchange="handleDatasetChange()">
+                <label for="relative">Relative Dataset</label>
+            </div>
         </div>
     </nav>
 
@@ -44,9 +88,26 @@
         <div class="svg-container">
             <div class="info-box" id="info-box">Hover over a country to see details</div>
             <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    var selectedDataset = localStorage.getItem('selectedDataset');
+                    if (selectedDataset === 'absolute') {
+                        document.getElementById('absolute').checked = true;
+                    } else if (selectedDataset === 'relative') {
+                        document.getElementById('relative').checked = true;
+                    }
+                });
+
+                function handleDatasetChange() {
+                    var selectedDataset = document.querySelector('input[name="dataset"]:checked').value;
+                    localStorage.setItem('selectedDataset', selectedDataset);
+                    location.reload(); // Ponovno učitava stranicu kako bi se prikazali novi podaci
+                }
+
+
                 var width = 1060;
                 var height = 850;
 
+                
                 var projection = d3.geo.mercator()
                     .center([15, 71.5])
                     .scale(600)
@@ -80,8 +141,20 @@
                 d3.json("europe.topojson", function (error, data) {
                     if (error) throw error;
 
+                    const selectedDataset = localStorage.getItem('selectedDataset');
+
+                    let filename;
+
+                    if (selectedDataset === 'absolute') {
+                        filename = 'dataset_eu.json';
+                    } else if (selectedDataset === 'relative') {
+                        filename = 'relative_dataset.json';
+                    } else {
+                        console.log('Error');
+                    }
+
                     //učitavanje dataseta sa podatcima o smrtnosti
-                    d3.json("dataset_eu.json", function (error, dataset) {
+                    d3.json(filename, function (error, dataset) {
                         if (error) throw error;
 
                         var fatalities = {};
@@ -101,10 +174,20 @@
                             }
                         });
 
-                        //definiranje domene i raspona za prikaza boja
-                        var color = d3.scale.quantize()
+
+
+                            //definiranje domene i raspona za prikaza boja
+                        if (filename === 'dataset_eu.json') {
+                            var color = d3.scale.quantize()
                             .domain([8150, 0]) //max i min
                             .range(colorRange);
+                        } else if (filename === 'relative_dataset.json') {
+                            var color = d3.scale.quantize()
+                            .domain([0.15, 0.05]) //max i min
+                            .range(colorRange);
+                        }
+
+                        
 
                         var countries = svg.selectAll(".country")
                             .data(topojson.feature(data, data.objects.europe).features)
@@ -117,7 +200,7 @@
                             .style("fill", function (d) {
                                 var fatalitiesCount = fatalities[d.properties.NAME]; // dohvaćanje broja umrlih za trenutnu državu
                                 // Provjera je li broj umrlih definiran, te postavljanje boje prema skali ako je, ili sive ako nije
-                                return isNaN(fatalitiesCount) ? "#7d7f82" : color(fatalitiesCount);
+                                return isNaN(fatalitiesCount) ? "#D3D3D3" : color(fatalitiesCount);
                             })
                             .on("mouseover", function (d) {
                                 infoBox.style("display", "block");
@@ -143,36 +226,83 @@
                                 }
                             });
 
+                            var domain = color.domain();
+                            var max_value = domain[0];
+                            var min_value = domain[1];
 
-                        var legend = svg.selectAll(".legend")
-                            .data(color.range().map(function (d) {
-                                d = color.invertExtent(d);
-                                if (!d[0]) d[0] = 0;
-                                if (!d[1]) d[1] = 0;
-                                return d;
-                            }))
-                            .enter().append("g")
-                            .attr("class", "legend")
-                            .attr("transform", function (d, i) {
-                                return "translate(0," + ((i * 20) + 20) + ")";
-                            });
+                            if (filename === 'dataset_eu.json') {
+                                var legend = svg.selectAll(".legend")
+                                    .data(color.range().map(function (d) {
+                                        d = color.invertExtent(d);
+                                        if (!d[0]) d[0] = 0;
+                                        if (!d[1]) d[1] = 0;
+                                        return d;
+                                    }))
+                                    .enter().append("g")
+                                    .attr("class", "legend")
+                                    .attr("transform", function (d, i) {
+                                        return "translate(0," + ((i * 30) + 30) + ")"; 
+                                    });
 
-                        legend.append("rect")
-                            .attr("x", width - 18)
-                            .attr("width", 18)
-                            .attr("height", 18)
-                            .style("fill", function (d) {
-                                return color(d[0]);
-                            });
+                                legend.append("rect")
+                                    .attr("x", width - 36) 
+                                    .attr("width", 30) 
+                                    .attr("height", 30) 
+                                    .style("fill", function (d) {
+                                        return color(d[0]);
+                                    });
 
-                        legend.append("text")
-                            .attr("x", width - 24)
-                            .attr("y", 9)
-                            .attr("dy", ".35em")
-                            .style("text-anchor", "end")
-                            .text(function (d) {
-                                return Math.round(d[0]) + " - " + Math.round(d[1]);
-                            });
+                                legend.append("text")
+                                    .attr("x", width - 42) 
+                                    .attr("y", 20) 
+                                    .attr("dy", ".35em")
+                                    .style("text-anchor", "end")
+                                    .style("font-size", "18px") 
+                                    .text(function (d) {
+                                        return Math.round(d[0]) + " - " + Math.round(d[1]);
+                                    });
+                            
+                            } else if (filename === 'relative_dataset.json') {
+                                var legend = svg.selectAll(".legend")
+                                    .data(color.range().map(function (d) {
+                                        var extent = color.invertExtent(d);
+                                        if (extent[0] === undefined) extent[0] = min_value;
+                                        if (extent[1] === undefined) extent[1] = max_value;
+                                        return extent;
+                                    }))
+                                    .enter().append("g")
+                                    .attr("class", "legend")
+                                    .attr("transform", function (d, i) {
+                                        return "translate(0," + ((i * 30) + 30) + ")";
+                                    });
+
+                                legend.append("rect")
+                                    .attr("x", width - 36)
+                                    .attr("width", 30)
+                                    .attr("height", 30)
+                                    .style("fill", function (d) {
+                                        return color(d[0]);
+                                    });
+
+                                legend.append("text")
+                                    .attr("x", width - 42)
+                                    .attr("y", 20)
+                                    .attr("dy", ".35em")
+                                    .style("text-anchor", "end")
+                                    .style("font-size", "14px")
+                                    .text(function (d, i) {
+                                        var format = d3.format(".3f");
+                                        if (i === 0) {
+                                            return format(max_value) + "<";
+                                        } else if (i === 9) {
+                                            return "<" + format(min_value);
+                                        } else {
+                                            return format(d[0]) + " - " + format(d[1]);
+                                        }
+                                    });
+                            }
+
+                           
 
                         //odabir godine koja će se prikazati na mapi
                         d3.selectAll(".godine").on("click", function () {
@@ -198,7 +328,7 @@
                                 .duration(750)
                                 .style("fill", function (d) {
                                     var fatalitiesCount = fatalities[d.properties.NAME];
-                                    return isNaN(fatalitiesCount) ? "#7d7f82" : color(fatalitiesCount);
+                                    return isNaN(fatalitiesCount) ? "#D3D3D3" : color(fatalitiesCount);
                                 });
                         }
 
@@ -247,6 +377,9 @@
                         d3.select("#animate-btn").on("click", animateYears);
                     });
                 });
+
+                
+
             </script>
         </div>
 

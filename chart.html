@@ -21,6 +21,44 @@
             background-color: #007bff;
             color: #ffffff;
         }
+
+        .radio-buttons-nav {
+            width: 5%;
+            margin-top: 0.7%;
+            height: auto;
+            display: flex; 
+            margin-right: 6%;
+        }
+
+        .radio-buttons-nav input[type="radio"] {
+            display: none; 
+        }
+
+        .radio-buttons-nav label {
+            display: inline-block;
+            padding: 2% 4%; 
+            font-size: 1vw;
+            cursor: pointer;
+            background-color: #ffffff;
+            color: #007bff;
+            border-radius: 5px;
+            margin-right: 3%; 
+            flex: 1; 
+            text-align: center;
+            transition: all 0.3s ease; 
+            white-space: nowrap;
+            vertical-align: middle;
+            display: flex;
+            align-items: center;
+        }
+
+        .radio-buttons-nav input[type="radio"]:checked + label {
+            background-color: #0056b3;
+            font-weight: bold;
+            color: #ffffff; 
+            padding: 5% 10%;
+        }
+        
     </style>
 </head>
 
@@ -30,6 +68,13 @@
             <a href="home.html">Home</a>
             <a href="map.html">Map</a>
             <a href="chart.html">Chart</a>
+
+            <div class="radio-buttons-nav">
+                <input type="radio" id="absolute" name="dataset" value="absolute" onchange="handleDatasetChange()">
+                <label for="absolute">Absolute Dataset</label>
+                <input type="radio" id="relative" name="dataset" value="relative" onchange="handleDatasetChange()">
+                <label for="relative">Relative Dataset</label>
+            </div>
         </div>
     </nav>
     
@@ -66,6 +111,21 @@
     </div>
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+                    var selectedDataset = localStorage.getItem('selectedDataset');
+                    if (selectedDataset === 'absolute') {
+                        document.getElementById('absolute').checked = true;
+                    } else if (selectedDataset === 'relative') {
+                        document.getElementById('relative').checked = true;
+                    }
+                });
+
+                function handleDatasetChange() {
+                    var selectedDataset = document.querySelector('input[name="dataset"]:checked').value;
+                    localStorage.setItem('selectedDataset', selectedDataset);
+                    location.reload(); // Ponovno učitava stranicu kako bi se prikazali novi podaci
+                }
+
         function loadCountryData(country) {
             window.location.href = 'chart_maker.html?country=' + country;
         }
